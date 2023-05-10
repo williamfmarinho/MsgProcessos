@@ -9,64 +9,132 @@
 #define WRITE 1
 
 int main(void) {
-    //int canal_12[2], canal_23[2], canal_31[2];
+    int canal_1[2], canal_2[2], canal_3[2];
     int canal_pai1[2], canal_pai2[2], canal_pai3[2];
 
     char input[256], output[256];
 
-    sem_t sem1, sem2, sem3;
-    sem_init(&sem1, 0, 0);
-    sem_init(&sem2, 0, 0);
-    sem_init(&sem3, 0, 0);
 
-    //pipe(canal_12);
-    //pipe(canal_23);
-    //pipe(canal_31); 
+
+    pipe(canal_1);
+    pipe(canal_2);
+    pipe(canal_3); 
     pipe(canal_pai1);
     pipe(canal_pai2);
     pipe(canal_pai3);
 
     pid_t pid_1 = fork();
     if (pid_1 == 0) {
-        printf ("Processo 1 - Enviando msg pro pai...\n");
-        strcpy(output, "Mensagem 1.");
-        write(canal_pai1[WRITE], output, sizeof(output) + 1);
-
-        sem_post(&sem1);
-
-        printf ("Processo 1 esperando...\n");
-        sem_wait(&sem3);
       
-        printf("Processo 1 - Terminou \n");
-
+        close(canal_pai1[READ]);
+        close(canal_1[WRITE]);
+        printf ("Processo 1 - Enviando msg pro pai...\n");
+        
+        strcpy(output, "Mensagem 1.");
+      
+        write(canal_pai1[WRITE], output, sizeof(output)+1);
+      
+        
+      
+      
+        char mensagem[256];
+        ssize_t t;
+        while ((t = read(canal_1[READ], mensagem, sizeof(mensagem)+1)) <= 0){
+          printf ("P1: Esperando msg do Pai...\n");
+          
+        }
+      
+      printf ("P1: Mensagem recebida do pai: %s\n", mensagem);
+      
         exit(0);
     }
 
     pid_t pid_2 = fork();
     if (pid_2 == 0) {
-        sem_wait(&sem2);
-        read(canal_pai2[READ], input, sizeof(input));
-        printf("Processo 2 - Mensagem recebida do pai: %s\n", input);
+        close(canal_pai2[READ]);
+        close(canal_2[WRITE]);
       
-        strcpy(output, "Mensagem 2.");
+        char mensagem[256];
+        ssize_t t;
       
-        write(canal_pai2[WRITE], output, sizeof(output) + 1);
-        sem_post(&sem3);
+        while ((t = read(canal_2[READ], mensagem, sizeof(mensagem) +1)) <= 0){
+        printf ("P2: Esperando msg do Pai...\n");
+      }
+      
+        printf ("P2: Mensagem recebida do pai: %s\n", mensagem);
 
+
+      printf ("Processo 2 - Enviando msg pro pai...\n");
+
+      
+      strcpy(output, "Mensagem 2.\n");
+      write(canal_pai2[WRITE], output, sizeof(output)+1);
+      
         exit(0);
     }
 
     pid_t pid_3 = fork();
     if (pid_3 == 0) {
+
+      
+        close(canal_pai3[READ]);
+        close(canal_3[WRITE]);
+      
+        char mensagem[256];
+        ssize_t t;
+      
+        while ((t = read(canal_3[READ], mensagem, sizeof(mensagem) +1)) <= 0){
+        printf ("P3: Esperando msg do Pai...\n");
+      }
+      
+      printf ("P3: Mensagem recebida do pai: %s\n", mensagem);
+      
+      printf ("Processo 3 - Enviando msg pro pai...\n");
+
+      strcpy(output, "Mensagem 3.\n");
+      write(canal_pai3[WRITE], output, sizeof(output)+1);
+      
         exit(0);
     }
+  
+    close(canal_pai1[WRITE]);
+    close(canal_1[READ]);
+    
+    
+    char mensagem[256];
+    ssize_t t;
+    while ((t = read(canal_pai1[READ], mensagem, sizeof(mensagem) +1)) <= 0){
+      printf ("PAI: Esperando msg do P1...\n");
+      }
 
-    sem_wait(&sem1);
+  
+    close(canal_pai2[WRITE]);
+    close(canal_2[READ]);
+  
+    strcpy(output, mensagem);
+  
+    write(canal_2[WRITE], output, sizeof(output) + 1);
 
-    read(canal_pai1[READ], input, sizeof(input));
-    strcpy(output, input);
-    write(canal_pai2[WRITE], output, sizeof(output) + 1);
-    sem_post(&sem2);
+
+    while ((t = read(canal_pai2[READ], mensagem, sizeof(mensagem) +1)) <= 0){
+      printf ("PAI: Esperando msg do P2...\n");
+      }
+
+    close(canal_pai3[WRITE]);
+    close(canal_3[READ]);
+  
+    strcpy(output, mensagem);
+  
+    write(canal_3[WRITE], output, sizeof(output) + 1);
+
+    while ((t = read(canal_pai3[READ], mensagem, sizeof(mensagem) +1)) <= 0){
+      printf ("PAI: Esperando msg do P3...\n");
+      }
+
+  
+    strcpy(output, mensagem);
+    write(canal_1[WRITE], output, sizeof(output) + 1);
+  
 
     waitpid(pid_1, NULL, 0);
     waitpid(pid_2, NULL, 0);
